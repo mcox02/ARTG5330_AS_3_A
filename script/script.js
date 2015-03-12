@@ -11,7 +11,7 @@ var canvas = d3.select('.plot')
     .attr('transform','translate('+margin.l+','+margin.t+')');
 
 //Scale for the size of the circles
-var scaleR = d3.scale.sqrt().domain([5,100]).range([5,120]);
+var scaleR = d3.scale.sqrt().domain([5,115]).range([5,120]);
 
 
 d3.csv('data/olympic_medal_count.csv', parse, dataLoaded);
@@ -34,36 +34,81 @@ function dataLoaded(err,rows){
         e.preventDefault();
 
         var year = $(this).data('year');
-        console.log(year);
+        rows.sort(function(a,b){
+        //Note: this is called a "comparator" function
+        //which makes sure that the array is sorted from highest to lowest
+        return b[year] - a[year];
+        });
+
+        //Note: this returns positions 0,1,2,3,4 of the "rows" array
+        var top5 = rows.slice(0,5);
+        draw(top5, year);
+        
+
+        
     });
 }
 
 function draw(rows, year){
     var topTeams = canvas.selectAll('.team')
-        .data(rows, function(d){ return d.country; })
-        .enter()
+        .data(rows, function(d){ return d.country; });
+    
+    var topTeamsEnter = topTeams.enter()
         .append('g')
         .attr('class', 'team')
         .attr('transform',function(d,i){
             //i ranges from 0 to 4
             return 'translate(' + i*(width/4) + ',' + height/2 + ')';
-        });
-    topTeams
+        })
+        .style('opacity',0);
+
+    topTeamsEnter
         .append('circle')
         .attr('r', function(d){
             return scaleR(d[year]);
         })
-    topTeams
+
+    topTeamsEnter
         .append('text')
         .attr('class','team-name')
         .text(function(d){ return d.country; })
         .attr('y', function(d){ return scaleR(d[year]+20)})
         .attr('text-anchor','middle');
-    topTeams
+
+    topTeamsEnter
         .append('text')
         .attr('class','medal-count')
         .text(function(d){ return d[year];})
         .attr('text-anchor','middle');
+
+    var topTeamsExit = topTeams.exit()
+            .transition()
+            .duration(200)
+            .attr('transform', function(d,i){
+                    return 'translate(' + i*(width/4) + ',' + height +')';})
+            .style('opacity', 0)
+            .remove();
+
+    var teamsTransition = topTeams.transition().duration(500);
+
+    teamsTransition
+        .attr('transform',function(d,i){
+            return 'translate(' + i*width/4 + ',' + height/2 +')'
+        })
+        .style('opacity','1');
+    teamsTransition
+        .select('circle')
+        .attr('r', function(d){
+            return scaleR(d[year])
+        });
+    teamsTransition
+        .select('.team-name')
+        .attr('y', function(d){return scaleR(d[year] + 20)});
+    teamsTransition
+        .select('.medal-count')
+        .text(function(d){return d[year];});
+        
+
 }
 
 function parse(row){
